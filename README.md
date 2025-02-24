@@ -8,7 +8,7 @@ A Python tool to manage and organize Booth item assets. This package lets you im
 - Creates a dedicated folder under the `BoothItems` directory.
 - Scrapes metadata (title, description, item ID, image URLs, etc.) from the Booth page.
 - Downloads images into an `images` subfolder.
-- Updates a central CSV database (`database.csv`) with the item metadata and local folder paths.
+- Stores metadata and relationships in a SQLite database using SQLAlchemy ORM.
 
 It also supports removing items from the database (with an option to delete their folders).
 
@@ -49,7 +49,7 @@ It also supports removing items from the database (with an option to delete thei
   Creates a dedicated folder for each item (named using the item ID and a sanitized title) under the `BoothItems` directory.
 
 - **Centralized Database:**  
-  Maintains a CSV database (`database.csv`) that stores metadata for all managed items.
+  Maintains a SQLite database that stores metadata and relationships for all managed items using SQLAlchemy ORM.
 
 - **Import & Remove Operations:**  
   Easily import new items or remove items (with optional folder deletion) via simple input files.
@@ -62,6 +62,7 @@ It also supports removing items from the database (with an option to delete thei
 - **Required Packages:**  
   - `requests`
   - `beautifulsoup4`
+  - `sqlalchemy`
 
 These are automatically installed when you install the package.
 
@@ -184,16 +185,25 @@ https://booth.pm/items/123456789
 
 ## Database
 
-The tool maintains a database file (`database.csv`) that stores metadata for all managed items. Each row includes fields such as:
-- item_id
-- title
-- url
-- description
-- images (list of original image URLs)
-- local_images (paths to downloaded images)
-- folder (local folder path)
+The tool uses a SQLite database (`booth.db`) with SQLAlchemy ORM to store metadata for all managed items. The database schema includes:
 
-This database is automatically updated during import and removal operations.
+### Items Table
+- `item_id` (primary key): Unique identifier for each item
+- `title`: Item name
+- `url`: Booth page URL
+- `description`: Item description
+- `folder_path`: Local folder path
+- `created_at`: Timestamp of creation
+- `updated_at`: Timestamp of last update
+
+### Images Table
+- `id` (primary key): Unique identifier for each image
+- `item_id` (foreign key): References the parent item
+- `url`: Original image URL
+- `local_path`: Path to downloaded image
+- `created_at`: Timestamp of creation
+
+The database is automatically created on first run and maintains relationships between items and their images. All operations use transactions to ensure data consistency.
 
 ---
 
@@ -211,7 +221,7 @@ This database is automatically updated during import and removal operations.
    The tool downloads all images found on the item page into an `images` subfolder within the item's folder, recording local paths under "local_images" in the metadata.
 
 4. **Database Update:**
-   The collected metadata (with folder and image details) is stored or updated in the central `database.csv` file.
+   The collected metadata (with folder and image details) is stored or updated in the SQLite database using SQLAlchemy ORM, maintaining proper relationships between items and their images.
 
 5. **Removal Mode:**
    When run with the --remove flag, the tool removes matching items from the database and, if specified, deletes their associated folders.
