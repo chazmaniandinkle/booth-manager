@@ -24,13 +24,15 @@ setup(
         'beautifulsoup4',
         'SQLAlchemy>=2.0.27',
         'playwright',
-        'tqdm'
+        'tqdm',
+        'PyQt6'
     ],
     entry_points={
         'console_scripts': [
             'booth-assets-manager = booth_assets_manager.organizer:main',
             'booth-vcc = booth_assets_manager.vcc_cli:main',
-            'booth-auth = booth_assets_manager.auth_cli:main'
+            'booth-auth = booth_assets_manager.auth_cli:main',
+            'booth-gui = booth_assets_manager.gui:main'
         ],
     },
     classifiers=[

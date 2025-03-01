@@ -5,9 +5,19 @@
 
 A Python tool to manage and organize Booth item assets. This package lets you import items by reading a CSV (with "URL" or "ID" columns), JSON, or plain text file containing Booth item links or IDs. It can scrape metadata, download preview images, and now with the new authentication system, **download your purchased items directly**. It also supports integration with VRChat Creator Companion (VCC) to allow you to use your Booth assets directly in Unity projects.
 
-## New in v0.3.0: Download Your Purchased Items
+## New in v0.4.0: Graphical User Interface
 
-The latest version adds support for downloading your purchased items from Booth:
+The latest version adds a comprehensive GUI for easier interaction:
+
+- **Modern Interface**: Intuitive tabbed interface with Dashboard, Items, Downloads, VCC Integration, and Settings
+- **Visual Management**: Browse, search, and filter your items with a visual interface
+- **Interactive Downloads**: Track download progress visually and manage your purchases
+- **VCC Management**: Package and manage your VCC repository with a few clicks
+- **Multithreaded Operations**: Background processing keeps the interface responsive
+
+![Booth Assets Manager GUI](https://github.com/chazmaniandinkle/booth-assets-manager/raw/main/docs/images/gui-screenshot.png)
+
+## Also in v0.3.0: Download Your Purchased Items
 
 - **Interactive Browser Authentication**: Log in through a browser window that opens from the app
 - **Purchase Management**: List and track your Booth purchases
@@ -22,6 +32,7 @@ The latest version adds support for downloading your purchased items from Booth:
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Usage](#usage)
+  - [GUI Interface](#gui-interface)
   - [Importing Items](#importing-items)
   - [Removing Items](#removing-items)
   - [Authentication](#authentication)
@@ -38,6 +49,14 @@ The latest version adds support for downloading your purchased items from Booth:
 ---
 
 ## Features
+
+- **Graphical User Interface:**
+  - Dashboard with statistics and quick actions
+  - Items management with search and filtering
+  - Visual download management with progress tracking
+  - VCC integration interface with repository management
+  - Settings configuration panel
+  - Multithreaded operations for background tasks
 
 - **Flexible Input:**  
   Accepts CSV, JSON, or plain text files with Booth URLs or item IDs.
@@ -88,6 +107,7 @@ The latest version adds support for downloading your purchased items from Booth:
 - **Required Packages:**  
   - `requests`, `beautifulsoup4`, `sqlalchemy` (Base functionality)
   - `playwright`, `tqdm` (Authentication and downloads)
+  - `PyQt6` (GUI interface)
 
 These are automatically installed when you install the package.
 
@@ -128,7 +148,23 @@ These are automatically installed when you install the package.
 
 ## Usage
 
-Once installed, the tool provides three command-line scripts: `booth-assets-manager` for general operations, `booth-vcc` for VCC integration, and `booth-auth` for authentication and downloads.
+Once installed, the tool provides four command-line scripts: `booth-gui` for the graphical interface, `booth-assets-manager` for general operations, `booth-vcc` for VCC integration, and `booth-auth` for authentication and downloads.
+
+### GUI Interface
+
+To launch the graphical interface:
+
+```bash
+booth-gui
+```
+
+The GUI provides access to all functionality through a user-friendly interface:
+
+- **Dashboard**: Shows statistics and quick actions
+- **Items**: Browse, search, and manage your Booth items
+- **Downloads**: Authenticate with Booth, view purchases, and download files
+- **VCC Integration**: Enable/disable VCC features, package items, and manage repositories
+- **Settings**: Configure paths, VCC parameters, and download options
 
 ### Importing Items
 
@@ -350,6 +386,8 @@ Future enhancements might include:
 - Dependency management between packages.
 - Direct VCC project integration.
 - Custom package templates for different asset types.
+- Additional GUI features and visualizations.
+- Configuration file support for persistent settings.
 
 Feel free to modify or extend the code to suit your workflow.
 
@@ -367,6 +405,16 @@ Feel free to modify or extend the code to suit your workflow.
 - **Network Errors:**
   Verify your internet connection if the tool fails to retrieve pages.
 
+### GUI Issues
+- **GUI doesn't start:**
+  Ensure PyQt6 is properly installed. Try reinstalling with `pip install PyQt6`.
+
+- **Slow performance:**
+  The GUI uses multithreading for background tasks, but very large operations might still cause temporary UI freezes.
+
+- **Display issues:**
+  If you encounter display problems, try adjusting your system's scaling settings or update your graphics drivers.
+
 ### Authentication Issues
 - **Browser doesn't open:**
   Ensure Playwright is properly installed with `playwright install`.
@@ -375,14 +423,14 @@ Feel free to modify or extend the code to suit your workflow.
   The default timeout is 5 minutes. Try again if needed.
 
 - **Session expires:**
-  Sessions will eventually expire. Run `booth-auth login` to reauthenticate.
+  Sessions will eventually expire. Use the login button to reauthenticate.
 
 ### Download Issues
 - **Download failures:**
   Check your internet connection and Booth account status.
 
 - **Parallel download errors:**
-  Reduce the concurrency with `--concurrent 2` if you encounter issues.
+  Reduce the concurrency in the settings tab if you encounter issues.
 
 - **Large file downloads:**
   Ensure you have sufficient disk space for large downloads.
