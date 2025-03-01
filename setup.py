@@ -7,7 +7,7 @@ with open('README.md', 'r', encoding='utf-8') as f:
 
 setup(
     name='booth_assets_manager',
-    version='0.1.0',
+    version='0.2.0',
     description='A tool to manage and organize Booth item assets by scraping metadata and images.',
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -26,7 +26,8 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'booth-assets-manager = booth_assets_manager.organizer:main'
+            'booth-assets-manager = booth_assets_manager.organizer:main',
+            'booth-vcc = booth_assets_manager.vcc_cli:main'
         ],
     },
     classifiers=[

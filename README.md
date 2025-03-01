@@ -10,7 +10,7 @@ A Python tool to manage and organize Booth item assets. This package lets you im
 - Downloads images into an `images` subfolder.
 - Stores metadata and relationships in a SQLite database using SQLAlchemy ORM.
 
-It also supports removing items from the database (with an option to delete their folders).
+It also supports removing items from the database (with an option to delete their folders) and creating VRChat Creator Companion (VCC) packages from your Booth assets.
 
 ---
 
@@ -22,8 +22,10 @@ It also supports removing items from the database (with an option to delete thei
 - [Usage](#usage)
   - [Importing Items](#importing-items)
   - [Removing Items](#removing-items)
+  - [VCC Integration](#vcc-integration)
 - [Input File Formats](#input-file-formats)
 - [Database](#database)
+- [VCC Repository](#vcc-repository)
 - [How It Works](#how-it-works)
 - [Extending the Script](#extending-the-script)
 - [Troubleshooting](#troubleshooting)
@@ -53,6 +55,13 @@ It also supports removing items from the database (with an option to delete thei
 
 - **Import & Remove Operations:**  
   Easily import new items or remove items (with optional folder deletion) via simple input files.
+
+- **VCC Integration:**  
+  Create VRChat Creator Companion compatible packages from your Booth assets, allowing you to use them directly in Unity projects.
+  - Generate Unity package structure from Booth assets
+  - Create local VCC repository
+  - Add repository to VCC with a single click
+  - Auto-package new items as they're downloaded
 
 ---
 
@@ -88,14 +97,14 @@ These are automatically installed when you install the package.
 
    ```bash
    python setup.py sdist bdist_wheel
-   pip install dist/booth_assets_manager-0.1.0-py3-none-any.whl
+   pip install dist/booth_assets_manager-0.2.0-py3-none-any.whl
    ```
 
 ---
 
 ## Usage
 
-Once installed, the tool provides a command-line script named `booth-assets-manager`.
+Once installed, the tool provides two command-line scripts: `booth-assets-manager` for general operations and `booth-vcc` for VCC integration.
 
 ### Importing Items
 
@@ -129,6 +138,51 @@ Example:
 
 ```bash
 booth-assets-manager remove_items.txt --remove --delete-folders
+```
+
+### VCC Integration
+
+You can also use VCC integration options directly with the main command:
+
+```bash
+booth-assets-manager input_file [--vcc-enable] [--vcc-package-all]
+```
+
+- `--vcc-enable`: Enable VCC integration.
+- `--vcc-package-all`: Package all items for VCC.
+- `--vcc-package ITEM_ID`: Package a specific item for VCC.
+- `--vcc-add`: Add repository to VCC.
+- `--vcc-status`: Show VCC integration status.
+- `--vcc-disable`: Disable VCC integration.
+
+Or use the dedicated VCC CLI:
+
+```bash
+booth-vcc COMMAND [OPTIONS]
+```
+
+Available commands:
+- `enable`: Enable VCC integration
+- `disable`: Disable VCC integration
+- `package ITEM_ID`: Package a specific item
+- `package-all`: Package all items
+- `regenerate`: Regenerate repository index
+- `add-to-vcc`: Add repository to VCC
+- `validate`: Validate repository structure
+- `status`: Show repository status
+- `settings`: Show or update settings
+
+Example:
+
+```bash
+# Enable VCC integration
+booth-vcc enable
+
+# Package all items
+booth-vcc package-all
+
+# Add repository to VCC
+booth-vcc add-to-vcc
 ```
 
 ---
@@ -195,6 +249,10 @@ The tool uses a SQLite database (`booth.db`) with SQLAlchemy ORM to store metada
 - `folder_path`: Local folder path
 - `created_at`: Timestamp of creation
 - `updated_at`: Timestamp of last update
+- `package_id`: VCC package ID (if packaged)
+- `is_packaged`: Whether the item is packaged for VCC
+- `package_version`: VCC package version
+- `last_packaged`: Timestamp of last packaging
 
 ### Images Table
 - `id` (primary key): Unique identifier for each image
@@ -204,6 +262,31 @@ The tool uses a SQLite database (`booth.db`) with SQLAlchemy ORM to store metada
 - `created_at`: Timestamp of creation
 
 The database is automatically created on first run and maintains relationships between items and their images. All operations use transactions to ensure data consistency.
+
+---
+
+## VCC Repository
+
+The VCC integration creates a local repository that can be added to the VRChat Creator Companion. The repository structure follows the VCC format:
+
+```
+Repository/
+├── index.json            # Repository listing
+└── Packages/             # Package storage
+    ├── com.creator.item1/
+    │   ├── package.json  # Package manifest
+    │   ├── README.md     # Generated from item description
+    │   ├── Runtime/      # Asset files
+    │   └── Documentation~/ # Images and documentation
+    └── com.creator.item2/
+        └── ...
+```
+
+Each package follows the Unity package structure with:
+- `Runtime/`: Contains the actual assets from the Booth item
+- `Documentation~/`: Contains images and documentation
+- `package.json`: Package manifest with metadata
+- `README.md`: Generated from the item description
 
 ---
 
@@ -223,7 +306,14 @@ The database is automatically created on first run and maintains relationships b
 4. **Database Update:**
    The collected metadata (with folder and image details) is stored or updated in the SQLite database using SQLAlchemy ORM, maintaining proper relationships between items and their images.
 
-5. **Removal Mode:**
+5. **VCC Package Creation (if enabled):**
+   - Creates a Unity package structure for the item
+   - Copies assets to the Runtime folder
+   - Copies images to the Documentation~ folder
+   - Generates package.json manifest
+   - Updates the repository index
+
+6. **Removal Mode:**
    When run with the --remove flag, the tool removes matching items from the database and, if specified, deletes their associated folders.
 
 ---
@@ -234,6 +324,8 @@ Future enhancements might include:
 - Downloading zip files for purchased items.
 - Integrating authentication to automatically process items from your Booth account.
 - Enhanced metadata extraction (e.g., additional tags or compatibility information).
+- Automatic detection of asset updates for VCC packages.
+- Dependency management between packages.
 
 Feel free to modify or extend the code to suit your workflow.
 
@@ -252,6 +344,11 @@ Feel free to modify or extend the code to suit your workflow.
 
 - **Network Errors:**
   Verify your internet connection if the tool fails to retrieve pages.
+
+- **VCC Integration Issues:**
+  - If VCC doesn't recognize the repository, check that the repository path is correct and the index.json file exists.
+  - If the vcc:// protocol link doesn't work, try adding the repository manually in VCC.
+  - If packages don't appear in Unity, verify that the package structure is correct and assets are in the Runtime folder.
 
 ---
 

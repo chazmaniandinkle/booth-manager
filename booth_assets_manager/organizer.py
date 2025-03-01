@@ -8,6 +8,8 @@ import requests
 import sys
 from bs4 import BeautifulSoup
 from .database import Database
+from .settings import settings
+from .vcc_integration import package_item, generate_repository_index
 
 # Global constants
 BASE_DIR = "BoothItems"
@@ -220,7 +222,9 @@ def parse_input_file(file_path):
     return items
 
 def add_items(input_file, force_update):
-    """Imports items from the input file, scrapes metadata, downloads images, and updates the database."""
+    """Imports items from the input file, scrapes metadata, downloads images, and updates the database.
+    If VCC integration is enabled and auto-package is enabled, also creates packages for new items.
+    """
     items = parse_input_file(input_file)
     if not items:
         print("No valid items found in input file.")
@@ -245,8 +249,28 @@ def add_items(input_file, force_update):
                 images=images
             )
             print(f"Added/updated item {metadata['item_id']} in database.")
+            
+            # Create VCC package if enabled
+            if settings.is_vcc_enabled() and settings.get_auto_package_new_items():
+                try:
+                    if package_item(metadata, settings.get_repository_path(), db):
+                        print(f"Created VCC package for item {metadata['item_id']}.")
+                except Exception as e:
+                    print(f"Failed to create VCC package for item {metadata['item_id']}: {e}")
         except Exception as e:
             print(f"Failed to process item {item.get('url')}: {e}")
+    
+    # Regenerate repository index if VCC integration is enabled and any items were added
+    if settings.is_vcc_enabled() and settings.get_auto_package_new_items() and len(items) > 0:
+        try:
+            generate_repository_index(
+                settings.get_repository_path(),
+                settings.get_repository_name(),
+                settings.get_repository_id(),
+                settings.get_repository_author()
+            )
+        except Exception as e:
+            print(f"Failed to regenerate repository index: {e}")
     
     print("Items have been added/updated in the database.")
 
@@ -291,8 +315,87 @@ def main():
     parser.add_argument("--force", action="store_true", help="Force re-download of metadata and images even if already present")
     parser.add_argument("--remove", action="store_true", help="Remove items from the database instead of adding")
     parser.add_argument("--delete-folders", action="store_true", help="(With --remove) Also delete the item folders from disk")
+    # VCC integration options
+    vcc_group = parser.add_argument_group('VCC Integration')
+    vcc_group.add_argument("--vcc-enable", action="store_true", help="Enable VCC integration")
+    vcc_group.add_argument("--vcc-disable", action="store_true", help="Disable VCC integration")
+    vcc_group.add_argument("--vcc-status", action="store_true", help="Show VCC integration status")
+    vcc_group.add_argument("--vcc-package", metavar="ITEM_ID", help="Package a specific item for VCC")
+    vcc_group.add_argument("--vcc-package-all", action="store_true", help="Package all items for VCC")
+    vcc_group.add_argument("--vcc-add", action="store_true", help="Add repository to VCC")
+    
     args = parser.parse_args()
 
+    # Handle VCC integration commands
+    if args.vcc_enable:
+        settings.set_vcc_enabled(True)
+        settings.ensure_repository_structure()
+        print("VCC integration enabled.")
+        return
+    
+    if args.vcc_disable:
+        settings.set_vcc_enabled(False)
+        print("VCC integration disabled.")
+        return
+    
+    if args.vcc_status:
+        from .vcc_integration import test_vcc_integration
+        
+        if not settings.is_vcc_enabled():
+            print("VCC integration is not enabled. Use --vcc-enable to enable it.")
+            return
+        
+        status = test_vcc_integration(settings.get_repository_path())
+        print(f"Repository Path: {settings.get_repository_path()}")
+        print(f"Repository Exists: {'Yes' if status['repository_exists'] else 'No'}")
+        print(f"Index Valid: {'Yes' if status['index_valid'] else 'No'}")
+        print(f"Packages Found: {status['packages_found']}")
+        print(f"VCC Protocol Works: {'Yes' if status['vcc_protocol_works'] else 'No'}")
+        print(f"Overall Status: {status['overall_status']}")
+        return
+    
+    if args.vcc_package:
+        if not settings.is_vcc_enabled():
+            print("VCC integration is not enabled. Use --vcc-enable to enable it.")
+            return
+        
+        db = Database()
+        item = db.get_item(args.vcc_package)
+        if not item:
+            print(f"Item {args.vcc_package} not found in database.")
+            return
+        
+        if package_item(item, settings.get_repository_path(), db):
+            print(f"Item {args.vcc_package} packaged successfully.")
+        else:
+            print(f"Failed to package item {args.vcc_package}.")
+        return
+    
+    if args.vcc_package_all:
+        if not settings.is_vcc_enabled():
+            print("VCC integration is not enabled. Use --vcc-enable to enable it.")
+            return
+        
+        from .vcc_integration import package_all_items
+        db = Database()
+        count = package_all_items(settings.get_repository_path(), db)
+        print(f"Packaged {count} items.")
+        return
+    
+    if args.vcc_add:
+        if not settings.is_vcc_enabled():
+            print("VCC integration is not enabled. Use --vcc-enable to enable it.")
+            return
+        
+        from .vcc_integration import open_vcc_integration
+        if open_vcc_integration(settings.get_repository_path()):
+            print("VCC integration link opened in browser.")
+        else:
+            print("Failed to open VCC integration link. Please add the repository manually.")
+            print(f"Repository path: file:///{os.path.abspath(os.path.join(settings.get_repository_path(), 'index.json')).replace(os.sep, '/')}")
+        return
+
+    # Handle regular commands
     if args.remove:
         remove_items(args.input_file, args.delete_folders)
     else:

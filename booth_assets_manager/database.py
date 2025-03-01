@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import create_engine, Column, String, Text, Integer, DateTime, ForeignKey
+from sqlalchemy import create_engine, Column, String, Text, Integer, DateTime, ForeignKey, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 import os
@@ -23,6 +23,12 @@ class Item(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
+    # VCC Package fields
+    package_id = Column(String)
+    is_packaged = Column(Boolean, default=False)
+    package_version = Column(String)
+    last_packaged = Column(DateTime)
+    
     # Relationship to images
     images = relationship("Image", back_populates="item", cascade="all, delete-orphan")
 
@@ -45,7 +51,7 @@ class Database:
         # Create session factory
         self.Session = sessionmaker(bind=engine)
     
-    def add_item(self, item_id: str, title: str, url: str, description: str, folder_path: str, images: list):
+    def add_item(self, item_id: str, title: str, url: str, description: str, folder_path: str, images: list, package_id: str = None, is_packaged: bool = False, package_version: str = None):
         """Add or update an item and its images in the database."""
         session = self.Session()
         try:
@@ -57,7 +63,10 @@ class Database:
                     title=title,
                     url=url,
                     description=description,
-                    folder_path=folder_path
+                    folder_path=folder_path,
+                    package_id=package_id,
+                    is_packaged=is_packaged,
+                    package_version=package_version
                 )
                 session.add(item)
             else:
@@ -66,6 +75,12 @@ class Database:
                 item.url = url
                 item.description = description
                 item.folder_path = folder_path
+                
+                # Update package info if provided
+                if package_id is not None:
+                    item.package_id = package_id
+                    item.is_packaged = is_packaged
+                    item.package_version = package_version
             
             # Clear existing images
             session.query(Image).filter_by(item_id=item_id).delete()
@@ -103,6 +118,25 @@ class Database:
         finally:
             session.close()
     
+    def update_package_info(self, item_id: str, package_id: str, package_version: str, is_packaged: bool = True):
+        """Update package information for an item."""
+        session = self.Session()
+        try:
+            item = session.query(Item).filter_by(item_id=item_id).first()
+            if item:
+                item.package_id = package_id
+                item.is_packaged = is_packaged
+                item.package_version = package_version
+                item.last_packaged = datetime.utcnow()
+                session.commit()
+                return True
+            return False
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+    
     def get_item(self, item_id: str):
         """Get an item and its images from the database."""
         session = self.Session()
@@ -119,7 +153,11 @@ class Database:
                 'description': item.description,
                 'folder': item.folder_path,
                 'images': [img.url for img in item.images],
-                'local_images': [img.local_path for img in item.images]
+                'local_images': [img.local_path for img in item.images],
+                'package_id': item.package_id,
+                'is_packaged': item.is_packaged,
+                'package_version': item.package_version,
+                'last_packaged': item.last_packaged.isoformat() if item.last_packaged else None
             }
         finally:
             session.close()
@@ -137,7 +175,34 @@ class Database:
                     'description': item.description,
                     'folder': item.folder_path,
                     'images': [img.url for img in item.images],
-                    'local_images': [img.local_path for img in item.images]
+                    'local_images': [img.local_path for img in item.images],
+                    'package_id': item.package_id,
+                    'is_packaged': item.is_packaged,
+                    'package_version': item.package_version,
+                    'last_packaged': item.last_packaged.isoformat() if item.last_packaged else None
+                }
+                for item in items
+            ]
+        finally:
+            session.close()
+    
+    def get_packaged_items(self):
+        """Get all packaged items from the database."""
+        session = self.Session()
+        try:
+            items = session.query(Item).filter_by(is_packaged=True).all()
+            return [
+                {
+                    'item_id': item.item_id,
+                    'title': item.title,
+                    'url': item.url,
+                    'description': item.description,
+                    'folder': item.folder_path,
+                    'images': [img.url for img in item.images],
+                    'local_images': [img.local_path for img in item.images],
+                    'package_id': item.package_id,
+                    'package_version': item.package_version,
+                    'last_packaged': item.last_packaged.isoformat() if item.last_packaged else None
                 }
                 for item in items
             ]
