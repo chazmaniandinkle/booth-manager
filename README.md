@@ -3,14 +3,16 @@
 [![Python 3.6+](https://img.shields.io/badge/python-3.6+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A Python tool to manage and organize Booth item assets. This package lets you import items by reading a CSV (with "URL" or "ID" columns), JSON, or plain text file containing Booth item links or IDs. For each item, the tool:
+A Python tool to manage and organize Booth item assets. This package lets you import items by reading a CSV (with "URL" or "ID" columns), JSON, or plain text file containing Booth item links or IDs. It can scrape metadata, download preview images, and now with the new authentication system, **download your purchased items directly**. It also supports integration with VRChat Creator Companion (VCC) to allow you to use your Booth assets directly in Unity projects.
 
-- Creates a dedicated folder under the `BoothItems` directory.
-- Scrapes metadata (title, description, item ID, image URLs, etc.) from the Booth page.
-- Downloads images into an `images` subfolder.
-- Stores metadata and relationships in a SQLite database using SQLAlchemy ORM.
+## New in v0.3.0: Download Your Purchased Items
 
-It also supports removing items from the database (with an option to delete their folders).
+The latest version adds support for downloading your purchased items from Booth:
+
+- **Interactive Browser Authentication**: Log in through a browser window that opens from the app
+- **Purchase Management**: List and track your Booth purchases
+- **Direct Downloads**: Download purchased item files directly through the application
+- **Automated Organization**: Files are automatically organized into your asset structure
 
 ---
 
@@ -22,8 +24,12 @@ It also supports removing items from the database (with an option to delete thei
 - [Usage](#usage)
   - [Importing Items](#importing-items)
   - [Removing Items](#removing-items)
+  - [Authentication](#authentication)
+  - [Downloading Purchases](#downloading-purchases)
+  - [VCC Integration](#vcc-integration)
 - [Input File Formats](#input-file-formats)
 - [Database](#database)
+- [VCC Repository](#vcc-repository)
 - [How It Works](#how-it-works)
 - [Extending the Script](#extending-the-script)
 - [Troubleshooting](#troubleshooting)
@@ -34,25 +40,45 @@ It also supports removing items from the database (with an option to delete thei
 ## Features
 
 - **Flexible Input:**  
-  Accepts CSV, JSON, or plain text files.  
-  - **CSV:** Supports columns "URL" or "ID" (case-insensitive) plus an optional "Title".
-  - **JSON:** Expects a list of objects with keys "url" or "id" (case-insensitive) and optionally "title".
-  - **Plain Text:** One URL or item ID per line.
+  Accepts CSV, JSON, or plain text files with Booth URLs or item IDs.
 
 - **Automatic Metadata Scraping:**  
   Scrapes key metadata from Booth pages, including title, item ID, description, and image URLs.
 
 - **Image Capture & Download:**  
-  Downloads images found on the item page into an `images` subfolder within the item's folder. Local paths are recorded in the metadata.
+  Downloads preview images found on the item page.
 
 - **Folder Organization:**  
-  Creates a dedicated folder for each item (named using the item ID and a sanitized title) under the `BoothItems` directory.
+  Creates a dedicated folder for each item under the `BoothItems` directory.
 
 - **Centralized Database:**  
-  Maintains a SQLite database that stores metadata and relationships for all managed items using SQLAlchemy ORM.
+  Maintains a SQLite database that stores metadata and relationships for all managed items.
 
-- **Import & Remove Operations:**  
-  Easily import new items or remove items (with optional folder deletion) via simple input files.
+- **Authentication:**
+  - Interactive browser-based login
+  - Secure cookie storage
+  - Session management
+  - Session validation
+
+- **Purchase Management:**
+  - List purchased items
+  - Track purchase details
+  - Update database with purchase information
+
+- **Download Features:**
+  - Direct download of purchased items
+  - Progress tracking
+  - Parallel downloads with concurrency control
+  - Resumable downloads
+  - File integrity verification
+  - Automatic organization
+
+- **VCC Integration:**  
+  Create VRChat Creator Companion compatible packages from your Booth assets.
+  - Generate Unity package structure from Booth assets
+  - Create local VCC repository
+  - Add repository to VCC with a single click
+  - Auto-package new items as they're downloaded
 
 ---
 
@@ -60,9 +86,8 @@ It also supports removing items from the database (with an option to delete thei
 
 - **Python 3.6+**
 - **Required Packages:**  
-  - `requests`
-  - `beautifulsoup4`
-  - `sqlalchemy`
+  - `requests`, `beautifulsoup4`, `sqlalchemy` (Base functionality)
+  - `playwright`, `tqdm` (Authentication and downloads)
 
 These are automatically installed when you install the package.
 
@@ -88,14 +113,22 @@ These are automatically installed when you install the package.
 
    ```bash
    python setup.py sdist bdist_wheel
-   pip install dist/booth_assets_manager-0.1.0-py3-none-any.whl
+   pip install dist/booth_assets_manager-0.3.0-py3-none-any.whl
+   ```
+
+3. **Install Browser Dependencies**
+
+   The authentication system uses Playwright which requires browser binaries:
+
+   ```bash
+   playwright install
    ```
 
 ---
 
 ## Usage
 
-Once installed, the tool provides a command-line script named `booth-assets-manager`.
+Once installed, the tool provides three command-line scripts: `booth-assets-manager` for general operations, `booth-vcc` for VCC integration, and `booth-auth` for authentication and downloads.
 
 ### Importing Items
 
@@ -131,15 +164,77 @@ Example:
 booth-assets-manager remove_items.txt --remove --delete-folders
 ```
 
+### Authentication
+
+To authenticate with Booth and enable direct downloads:
+
+```bash
+# Start interactive login
+booth-auth login
+
+# Check authentication status
+booth-auth status
+
+# Log out and clear session data
+booth-auth logout
+```
+
+The login command will open a browser window where you can log in to your Booth account. Once logged in, the window will close automatically and your session will be saved for future use.
+
+### Downloading Purchases
+
+To download your purchased items:
+
+```bash
+# List purchases and optionally update database
+booth-auth purchases [--update-db]
+
+# Download a specific item
+booth-auth download --item-id ITEM_ID
+
+# Download all purchased items
+booth-auth download --all
+
+# Specify output directory
+booth-auth download --all --output-dir /path/to/directory
+
+# Control concurrent downloads
+booth-auth download --all --concurrent 5
+```
+
+Downloaded files are organized into a folder structure similar to the main item structure:
+
+```
+BoothDownloads/
+├── {item_id}_{title}/
+│   ├── downloads/
+│   │   ├── file1.zip
+│   │   └── file2.pdf
+│   └── extracted/
+│       └── file1/
+```
+
+### VCC Integration
+
+You can use VCC integration to create Unity packages:
+
+```bash
+# Enable VCC integration
+booth-vcc enable
+
+# Package all items
+booth-vcc package-all
+
+# Add repository to VCC
+booth-vcc add-to-vcc
+```
+
 ---
 
 ## Input File Formats
 
 ### CSV Files
 
-The CSV file can contain columns named "URL" or "ID" (case-insensitive), with an optional "Title" column.
-
-Example (items.csv):
 ```csv
 URL,Title
 https://booth.pm/items/123456789,Stylish Outfit
@@ -155,9 +250,6 @@ ID,Title
 
 ### JSON Files
 
-A JSON file should contain a list of objects. Each object can have keys "url" or "id" (case-insensitive) and optionally "title."
-
-Example (items.json):
 ```json
 [
   {
@@ -173,9 +265,6 @@ Example (items.json):
 
 ### Plain Text Files
 
-A plain text file should list one item per line. Each line can be either a full URL (starting with "http") or an item ID.
-
-Example (items.txt):
 ```
 https://booth.pm/items/123456789
 987654321
@@ -185,55 +274,82 @@ https://booth.pm/items/123456789
 
 ## Database
 
-The tool uses a SQLite database (`booth.db`) with SQLAlchemy ORM to store metadata for all managed items. The database schema includes:
+The tool uses a SQLite database (`booth.db`) with SQLAlchemy ORM. The extended schema includes:
 
 ### Items Table
-- `item_id` (primary key): Unique identifier for each item
-- `title`: Item name
-- `url`: Booth page URL
-- `description`: Item description
-- `folder_path`: Local folder path
-- `created_at`: Timestamp of creation
-- `updated_at`: Timestamp of last update
+- Basic metadata (item_id, title, url, description, etc.)
+- Purchase information (is_purchased, purchase_date, purchase_price, etc.)
+- Package information for VCC integration
+- Download status tracking
 
 ### Images Table
-- `id` (primary key): Unique identifier for each image
-- `item_id` (foreign key): References the parent item
-- `url`: Original image URL
-- `local_path`: Path to downloaded image
-- `created_at`: Timestamp of creation
+- Original image URLs and local paths
+- Relationship to parent item
 
-The database is automatically created on first run and maintains relationships between items and their images. All operations use transactions to ensure data consistency.
+### Downloads Table
+- Downloaded file information
+- File paths and download status
+- File integrity information
+- Download history tracking
+
+The database is automatically created on first run and maintains relationships between items, images, and downloads. All operations use transactions to ensure data consistency.
+
+---
+
+## VCC Repository
+
+The VCC integration creates a local repository that can be added to the VRChat Creator Companion. The repository structure follows the VCC format:
+
+```
+Repository/
+├── index.json            # Repository listing
+└── Packages/             # Package storage
+    ├── com.creator.item1/
+    │   ├── package.json  # Package manifest
+    │   ├── README.md     # Generated from item description
+    │   ├── Runtime/      # Asset files
+    │   └── Documentation~/ # Images and documentation
+    └── com.creator.item2/
+        └── ...
+```
 
 ---
 
 ## How It Works
 
-1. **Input Parsing:**
-   The tool reads your input file, automatically determining whether each entry is a URL or an ID. For CSV and JSON files, keys are converted to lowercase for case-insensitive processing.
+### Item Import Process
+1. The tool reads your input file, determining whether each entry is a URL or an ID.
+2. For each item, a dedicated folder is created under `BoothItems/`.
+3. The tool scrapes the item's metadata from Booth.
+4. Images are downloaded into an `images` subfolder.
+5. The collected metadata is stored in the SQLite database.
+6. If VCC integration is enabled, a Unity package is created.
 
-2. **Folder Creation & Metadata Scraping:**
-   For each item, a dedicated folder is created under `BoothItems/` using a combination of the item ID and a sanitized title.
-   - If the metadata.json file is missing or the --force flag is used, the tool scrapes the item's metadata from Booth.
-   - The scraper extracts the title, description, and image URLs from the page.
+### Authentication Process
+1. When you run `booth-auth login`, a browser window opens.
+2. You log into your Booth account normally in this window.
+3. Once logged in, the application automatically captures the authentication cookies.
+4. These cookies are securely stored for future sessions.
+5. The browser window closes automatically after successful login.
 
-3. **Image Capture & Download:**
-   The tool downloads all images found on the item page into an `images` subfolder within the item's folder, recording local paths under "local_images" in the metadata.
-
-4. **Database Update:**
-   The collected metadata (with folder and image details) is stored or updated in the SQLite database using SQLAlchemy ORM, maintaining proper relationships between items and their images.
-
-5. **Removal Mode:**
-   When run with the --remove flag, the tool removes matching items from the database and, if specified, deletes their associated folders.
+### Download Process
+1. When you list purchases, the tool uses your authentication to access your Booth account.
+2. For each purchased item, it extracts the title, ID, purchase date, and price.
+3. When downloading, it visits the item's download page to extract download links.
+4. Files are downloaded with progress tracking and organized into folders.
+5. Download information is stored in the database for tracking.
+6. If VCC integration is enabled, downloaded items can be packaged for Unity.
 
 ---
 
 ## Extending the Script
 
 Future enhancements might include:
-- Downloading zip files for purchased items.
-- Integrating authentication to automatically process items from your Booth account.
 - Enhanced metadata extraction (e.g., additional tags or compatibility information).
+- Automatic detection of asset updates for VCC packages.
+- Dependency management between packages.
+- Direct VCC project integration.
+- Custom package templates for different asset types.
 
 Feel free to modify or extend the code to suit your workflow.
 
@@ -241,17 +357,40 @@ Feel free to modify or extend the code to suit your workflow.
 
 ## Troubleshooting
 
+### General Issues
 - **Metadata Scraping Errors:**
-  If metadata isn't being scraped correctly, verify that the CSS selectors in `organizer.py` (inside `scrape_metadata()`) match Booth's current page structure.
+  If metadata isn't being scraped correctly, verify that the CSS selectors match Booth's current page structure.
 
 - **Input Parsing Issues:**
-  Ensure your input file is formatted correctly. For CSV and JSON files, use the proper keys ("url" or "id")—these are handled case-insensitively.
-
-- **Image Download Errors:**
-  Check your internet connection if image downloads fail, and review output messages for specific error details.
+  Ensure your input file is formatted correctly. For CSV and JSON files, use the proper keys ("url" or "id").
 
 - **Network Errors:**
   Verify your internet connection if the tool fails to retrieve pages.
+
+### Authentication Issues
+- **Browser doesn't open:**
+  Ensure Playwright is properly installed with `playwright install`.
+
+- **Login timeout:**
+  The default timeout is 5 minutes. Try again if needed.
+
+- **Session expires:**
+  Sessions will eventually expire. Run `booth-auth login` to reauthenticate.
+
+### Download Issues
+- **Download failures:**
+  Check your internet connection and Booth account status.
+
+- **Parallel download errors:**
+  Reduce the concurrency with `--concurrent 2` if you encounter issues.
+
+- **Large file downloads:**
+  Ensure you have sufficient disk space for large downloads.
+
+### VCC Integration Issues
+- If VCC doesn't recognize the repository, check that the repository path is correct.
+- If the vcc:// protocol link doesn't work, try adding the repository manually in VCC.
+- If packages don't appear in Unity, verify that the package structure is correct.
 
 ---
 

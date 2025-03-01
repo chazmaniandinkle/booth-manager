@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2025-02-28
+
+### Added
+- Browser-based authentication using Playwright
+- Interactive login flow for capturing cookies
+- Session validation and management
+- Purchase listing and tracking
+- File download functionality with progress tracking
+- Parallel downloads with concurrency limits
+- Resumable downloads with state tracking
+- Checksum verification for file integrity
+- User preferences system for downloads
+- Database schema extensions for purchases and downloads
+- New CLI interface for authentication and downloads
+- Comprehensive error handling for downloads
+- Secure cookie storage and management
+
+### Changed
+- Updated database schema to track purchases and downloads
+- Enhanced item model with purchase information
+- Added download tracking and management
+- Improved error handling for network operations
+
+## [0.2.0] - 2025-02-28
+
+### Added
+- VCC (VRChat Creator Companion) integration
+- Local VCC repository generation
+- Package manifest generation from Booth metadata
+- Unity package structure creation
+- Repository index generation
+- VCC protocol link support
+- Command-line interface for VCC operations
+- Settings management for VCC integration
+- Auto-packaging option for new items
+- Bulk packaging operations
+- Repository validation and testing
+
 ## [0.1.1] - 2024-02-24
 
 ### Changed
