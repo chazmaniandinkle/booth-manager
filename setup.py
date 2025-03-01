@@ -7,8 +7,8 @@ with open('README.md', 'r', encoding='utf-8') as f:
 
 setup(
     name='booth_assets_manager',
-    version='0.2.0',
-    description='A tool to manage and organize Booth item assets by scraping metadata and images.',
+    version='0.3.0',
+    description='A tool to manage and organize Booth item assets by scraping metadata and images, with support for downloading purchased items.',
     long_description=long_description,
     long_description_content_type='text/markdown',
     author='Chaz Dinkle',
@@ -22,12 +22,15 @@ setup(
     install_requires=[
         'requests',
         'beautifulsoup4',
-        'SQLAlchemy>=2.0.27'
+        'SQLAlchemy>=2.0.27',
+        'playwright',
+        'tqdm'
     ],
     entry_points={
         'console_scripts': [
             'booth-assets-manager = booth_assets_manager.organizer:main',
-            'booth-vcc = booth_assets_manager.vcc_cli:main'
+            'booth-vcc = booth_assets_manager.vcc_cli:main',
+            'booth-auth = booth_assets_manager.auth_cli:main'
         ],
     },
     classifiers=[
@@ -46,5 +49,5 @@ setup(
         'Topic :: Utilities',
     ],
     python_requires='>=3.6',
-    keywords='booth marketplace assets manager downloader scraper',
+    keywords='booth marketplace assets manager downloader scraper authentication',
 )
